@@ -25,6 +25,7 @@ CHECKLIST: Dict[str, List[str]] = {
         "Verify owner assignment and routing rules are active.",
     ],
 }
+URL_TIMEOUT_SECONDS = 30
 
 
 def _bucket_for_drop(drop_rate: float) -> str:
@@ -82,8 +83,9 @@ def _load_payload(input_source: str) -> Dict[str, Any]:
     if _is_http_url(input_source):
         try:
             ssl_context = ssl.create_default_context()
-            with urlopen(input_source, timeout=30, context=ssl_context) as response:
-                content_type = response.headers.get_content_type()
+            with urlopen(input_source, timeout=URL_TIMEOUT_SECONDS, context=ssl_context) as response:
+                raw_content_type = response.headers.get("Content-Type", "")
+                content_type = raw_content_type.split(";", 1)[0].strip().lower()
                 if content_type not in {"application/json", "text/json"} and not content_type.endswith(
                     "+json"
                 ):
