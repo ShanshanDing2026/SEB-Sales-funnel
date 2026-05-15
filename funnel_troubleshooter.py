@@ -24,6 +24,12 @@ CHECKLIST: Dict[str, List[str]] = {
 
 
 def _bucket_for_drop(drop_rate: float) -> str:
+    """Map drop severity to the most likely troubleshooting area.
+
+    >=70%: severe break often tied to tracking/data integrity gaps.
+    >=50%: major operational friction typically in handoff/sync.
+    <50%: moderate degradation often caused by lead quality changes.
+    """
     if drop_rate >= 0.7:
         return "tracking"
     if drop_rate >= 0.5:
@@ -65,7 +71,7 @@ def analyze(stages: List[Dict[str, int]]) -> Dict[str, Any]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Troubleshoot sales funnel drop-offs.")
-    parser.add_argument("--input", required=True, help="Absolute path to a JSON input file.")
+    parser.add_argument("--input", required=True, help="Path to a JSON input file.")
     args = parser.parse_args()
 
     with open(args.input, "r", encoding="utf-8") as f:
