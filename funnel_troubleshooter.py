@@ -74,11 +74,20 @@ def main() -> None:
     parser.add_argument("--input", required=True, help="Path to a JSON input file.")
     args = parser.parse_args()
 
-    with open(args.input, "r", encoding="utf-8") as f:
-        payload = json.load(f)
+    try:
+        with open(args.input, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+    except FileNotFoundError as exc:
+        raise SystemExit(f"Input file not found: {args.input}") from exc
+    except PermissionError as exc:
+        raise SystemExit(f"Cannot read input file (permission denied): {args.input}") from exc
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"Invalid JSON in input file: {args.input}") from exc
 
     funnel_name = payload.get("funnel_name", "Sales Funnel")
     stages = payload.get("stages", [])
+    if len(stages) < 2:
+        raise SystemExit("Invalid input: 'stages' must include at least two stage objects.")
     result = analyze(stages)
 
     print(f"=== {funnel_name} troubleshooting report ===")
