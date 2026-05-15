@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import json
-from typing import Dict, List
+from typing import Any, Dict, List
 
 
 CHECKLIST: Dict[str, List[str]] = {
@@ -31,7 +31,7 @@ def _bucket_for_drop(drop_rate: float) -> str:
     return "lead_quality"
 
 
-def analyze(stages: List[Dict[str, int]]) -> Dict[str, object]:
+def analyze(stages: List[Dict[str, int]]) -> Dict[str, Any]:
     if len(stages) < 2:
         raise ValueError("At least two stages are required.")
 
