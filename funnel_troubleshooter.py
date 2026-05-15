@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import ssl
 from typing import Any, Dict, List
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
@@ -80,12 +81,20 @@ def _is_http_url(value: str) -> bool:
 def _load_payload(input_source: str) -> Dict[str, Any]:
     if _is_http_url(input_source):
         try:
-            with urlopen(input_source, timeout=30) as response:
+            ssl_context = ssl.create_default_context()
+            with urlopen(input_source, timeout=30, context=ssl_context) as response:
+                content_type = response.headers.get_content_type()
+                if content_type not in {"application/json", "text/json"} and not content_type.endswith(
+                    "+json"
+                ):
+                    raise SystemExit(
+                        f"URL must return JSON content, got '{content_type}': {input_source}"
+                    )
                 body = response.read().decode("utf-8")
         except HTTPError as exc:
             raise SystemExit(f"Cannot read URL (HTTP {exc.code}): {input_source}") from exc
         except URLError as exc:
-            raise SystemExit(f"Cannot read URL: {input_source}") from exc
+            raise SystemExit(f"Cannot read URL: {input_source} ({exc.reason})") from exc
         except UnicodeDecodeError as exc:
             raise SystemExit(f"URL content is not UTF-8 text: {input_source}") from exc
 
