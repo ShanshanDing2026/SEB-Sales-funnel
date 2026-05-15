@@ -85,7 +85,11 @@ def _is_valid_json_content_type(content_type: str) -> bool:
     if "/" not in content_type:
         return False
     media_type, subtype = content_type.split("/", 1)
-    return bool(media_type) and subtype.endswith("+json")
+    return (
+        bool(media_type)
+        and subtype.endswith("+json")
+        and len(subtype) > len("+json")
+    )
 
 
 def _load_payload(input_source: str) -> Dict[str, Any]:
@@ -99,7 +103,7 @@ def _load_payload(input_source: str) -> Dict[str, Any]:
                 content_type = raw_content_type.split(";", 1)[0].strip().lower()
                 if not _is_valid_json_content_type(content_type):
                     raise SystemExit(
-                        f"URL must return JSON content, got '{content_type}': {input_source}"
+                        f"URL must return JSON content, got '{raw_content_type or content_type}': {input_source}"
                     )
                 body = response.read().decode("utf-8")
         except HTTPError as exc:
