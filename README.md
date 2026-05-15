@@ -11,6 +11,12 @@ Use the CLI tool to identify the largest conversion drop and get targeted troubl
 python3 funnel_troubleshooter.py --input ./funnel_metrics.json
 ```
 
+Or use a URL as input:
+
+```bash
+python3 funnel_troubleshooter.py --input "https://example.com/funnel_metrics.json"
+```
+
 ### Input format
 
 ```json

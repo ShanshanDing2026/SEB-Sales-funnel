@@ -2,6 +2,9 @@
 import argparse
 import json
 from typing import Any, Dict, List
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlparse
+from urllib.request import urlopen
 
 
 CHECKLIST: Dict[str, List[str]] = {
@@ -69,20 +72,48 @@ def analyze(stages: List[Dict[str, int]]) -> Dict[str, Any]:
     }
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Troubleshoot sales funnel drop-offs.")
-    parser.add_argument("--input", required=True, help="Path to a JSON input file.")
-    args = parser.parse_args()
+def _is_http_url(value: str) -> bool:
+    parsed = urlparse(value)
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+
+def _load_payload(input_source: str) -> Dict[str, Any]:
+    if _is_http_url(input_source):
+        try:
+            with urlopen(input_source, timeout=30) as response:
+                body = response.read().decode("utf-8")
+        except HTTPError as exc:
+            raise SystemExit(f"Cannot read URL (HTTP {exc.code}): {input_source}") from exc
+        except URLError as exc:
+            raise SystemExit(f"Cannot read URL: {input_source}") from exc
+        except UnicodeDecodeError as exc:
+            raise SystemExit(f"URL content is not UTF-8 text: {input_source}") from exc
+
+        try:
+            return json.loads(body)
+        except json.JSONDecodeError as exc:
+            raise SystemExit(
+                f"Invalid JSON from URL: {input_source}. "
+                "Provide a JSON document with 'funnel_name' and 'stages'."
+            ) from exc
 
     try:
-        with open(args.input, "r", encoding="utf-8") as f:
-            payload = json.load(f)
+        with open(input_source, "r", encoding="utf-8") as f:
+            return json.load(f)
     except FileNotFoundError as exc:
-        raise SystemExit(f"Input file not found: {args.input}") from exc
+        raise SystemExit(f"Input file not found: {input_source}") from exc
     except PermissionError as exc:
-        raise SystemExit(f"Cannot read input file (permission denied): {args.input}") from exc
+        raise SystemExit(f"Cannot read input file (permission denied): {input_source}") from exc
     except json.JSONDecodeError as exc:
-        raise SystemExit(f"Invalid JSON in input file: {args.input}") from exc
+        raise SystemExit(f"Invalid JSON in input file: {input_source}") from exc
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Troubleshoot sales funnel drop-offs.")
+    parser.add_argument("--input", required=True, help="Path or URL to a JSON input.")
+    args = parser.parse_args()
+
+    payload = _load_payload(args.input)
 
     funnel_name = payload.get("funnel_name", "Sales Funnel")
     stages = payload.get("stages", [])
