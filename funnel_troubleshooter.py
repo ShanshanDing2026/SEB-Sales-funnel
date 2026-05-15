@@ -25,7 +25,7 @@ CHECKLIST: Dict[str, List[str]] = {
         "Verify owner assignment and routing rules are active.",
     ],
 }
-URL_TIMEOUT_SECONDS = 30
+HTTP_REQUEST_TIMEOUT_SECONDS = 30
 
 
 def _bucket_for_drop(drop_rate: float) -> str:
@@ -79,16 +79,20 @@ def _is_http_url(value: str) -> bool:
     return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
 
 
+def _is_valid_json_content_type(content_type: str) -> bool:
+    return content_type in {"application/json", "text/json"} or content_type.endswith("+json")
+
+
 def _load_payload(input_source: str) -> Dict[str, Any]:
     if _is_http_url(input_source):
         try:
             ssl_context = ssl.create_default_context()
-            with urlopen(input_source, timeout=URL_TIMEOUT_SECONDS, context=ssl_context) as response:
+            with urlopen(
+                input_source, timeout=HTTP_REQUEST_TIMEOUT_SECONDS, context=ssl_context
+            ) as response:
                 raw_content_type = response.headers.get("Content-Type", "")
                 content_type = raw_content_type.split(";", 1)[0].strip().lower()
-                if content_type not in {"application/json", "text/json"} and not content_type.endswith(
-                    "+json"
-                ):
+                if not _is_valid_json_content_type(content_type):
                     raise SystemExit(
                         f"URL must return JSON content, got '{content_type}': {input_source}"
                     )
@@ -103,10 +107,7 @@ def _load_payload(input_source: str) -> Dict[str, Any]:
         try:
             return json.loads(body)
         except json.JSONDecodeError as exc:
-            raise SystemExit(
-                f"Invalid JSON from URL: {input_source}. "
-                "Provide a JSON document with 'funnel_name' and 'stages'."
-            ) from exc
+            raise SystemExit(f"Invalid JSON from URL: {input_source}") from exc
 
     try:
         with open(input_source, "r", encoding="utf-8") as f:
