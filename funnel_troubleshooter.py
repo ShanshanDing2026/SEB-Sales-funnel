@@ -80,7 +80,12 @@ def _is_http_url(value: str) -> bool:
 
 
 def _is_valid_json_content_type(content_type: str) -> bool:
-    return content_type in {"application/json", "text/json"} or content_type.endswith("+json")
+    if content_type == "application/json":
+        return True
+    if "/" not in content_type:
+        return False
+    media_type, subtype = content_type.split("/", 1)
+    return bool(media_type) and subtype.endswith("+json")
 
 
 def _load_payload(input_source: str) -> Dict[str, Any]:
